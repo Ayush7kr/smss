@@ -35,17 +35,19 @@ For detailed technical information, refer to the following documents in the `doc
 - MongoDB (Running locally or on Atlas)
 
 ### 1. Configure Environment Variables
-Create a `.env` file in the `backend/` directory:
-```env
-PORT=5000
-MONGODB_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret
-```
+- Create a `.env` file in the `backend/` directory.
+- You can copy the template from `backend/.env.example`:
+  ```bash
+  cp backend/.env.example backend/.env
+  ```
+- Ensure `MONGODB_URI` points to your running MongoDB instance (default: `mongodb://localhost:27017`).
 
 ### 2. Setup Backend
 ```powershell
 cd backend
 npm install
+# Optional: Seed demo data (Super Admin: superadmin@ssms.com / password123)
+npm run seed 
 npm run dev
 ```
 
@@ -55,6 +57,9 @@ cd frontend
 npm install
 npm run dev
 ```
+
+---
+*For a more detailed guide, see [docs/setup_guide.md](./docs/setup_guide.md).*
 
 ---
 *Built with ❤️ for better community management.*
