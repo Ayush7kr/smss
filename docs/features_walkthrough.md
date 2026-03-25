@@ -1,47 +1,70 @@
-# Deadline-Based Complaint Management System Implementation
+# SSMS - Full Features Walkthrough
 
-The Deadline-Based Complaint Workflow with Vendor Performance Tracking has been successfully structured and implemented into the Smart Society Management System (SSMS).
+The **Smart Society Management System (SSMS)** is a comprehensive platform built to handle every aspect of residential society operations. This document provides a complete guide to all features available across all user roles.
 
-## Key Changes Implemented
+---
 
-### 1. Database Schema Expansions
-- **Complaints (`Complaint.js`)**: Now tracks `assignedVendorId`, `assignedAt`, `dueDate`, `completionDate`, `isOverdue`, and `escalationCount` with a status enum supporting the expanded lifecycle (`Pending`, `Assigned`, `In Progress`, `Completed`, `Verified`, `Escalated`, `Reassigned`).
-- **Vendors (`User.js`)**: Vendor profiles aggregate real-time metrics (`totalTasksAssigned`, `completedOnTime`, `completedLate`, `failedTasks`, `rating`).
+## 🛡️ Administrative Control (Super & Society Admin)
 
-### 2. Background Automation Job
-- Implemented `cronService.js` utilizing `node-cron` to perform sweeping background checks of all registered tenant databases.
-- When traversing, the node job checks all active tasks exceeding deadlines, forcefully marks them as "Escalated," and penalizes vendor `failedTasks` statistics automatically.
+### 1. Society Lifecycle Management
+- **Self-Registration**: Societies can register via a professional landing page.
+- **Super Admin Approval**: All new societies must be vetted and approved by a platform Super Admin before they can begin operations.
+- **Role-Based Provisioning**: Automatic setup of Society Admin, Guard, and Vendor roles upon society approval.
 
-### 3. Specific REST Controller Actions
-- Splitting `complaintController.js` logic across 6 discrete lifecycle boundaries ensures tighter data validation and vendor score calculation:
-  - `POST /` (Resident): Initiates complaint.
-  - `PUT /assign` (Admin): Formally dispatches assignment with precise timestamp limits.
-  - `PUT /start` & `PUT /complete` (Vendor): Captures completion markers.
-  - `PUT /verify` (Resident): Resolves tasks and processes dynamic metric ratings mapping Completion speed strictly to the initial deadline.
-  - `PUT /reassign` & `PUT /escalate`
+### 2. Financial Management & Analytics
+- **Billing Dashboard**: Track total collected vs. pending maintenance dues.
+- **Automated Bills**: Monthly maintenance invoices are generated automatically for each resident.
+- **Advanced Data Viz**: Real-time charts (Bar/Line/Pie) visualize collection rates, complaint resolution speed, and society growth.
 
-### 4. Interactive Frontend Pages
-- **Complaints Hub (`Complaints.jsx`)**: The data table rendering logic received "Countdown Tags" displaying colored timestamps remaining before breach (e.g. `2 days left`), coupled with robust Modal interactions for vendor assignment dropdown operations. Action Buttons rendered conditional on both Status and user Role ensure data safety (E.g. only Residents see "Verify" on Completed tasks).
-- **Vendor Portal (`VendorDashboard.jsx`)**: Upgraded to consume dynamic data (replacing generic UI mockups). Highlights priority assignments immediately along with dedicated 'Start' or 'Mark Done' action flows to feed back to the backend.
-- **Vendor Directory (`Vendors.jsx`)**: Operates against the newly added `/api/vendors/performance` route sorting providers by performance rating algorithm. Each member boasts precise analytical gauges of service quality over time.
-- **Admin Dashboards**: Eradicated static, randomized UI widget data across `SocietyAdminDashboard` and `SuperAdminDashboard`, replacing them with authentic system metric aggregates driven by advanced MongoDB controller queries (e.g., dynamically compiling all child Tenant DB bills for revenue calculation).
+### 3. Vendor Performance Tracking
+- **Service Directory**: Managed list of plumbers, electricians, and security providers.
+- **Dynamic Ratings**: Auto-calculating vendor performance scores based on their historical completion speed vs. deadlines.
 
-## Validation 
-- Back-end REST syntax passed local compiler tests (`node -c`).
-- Front-end integration checked using `vite build` compiler. 
-- Discovered and rapidly fixed an intermediate missing Mongoose `populate` gap allowing for uninterrupted client-side assignment UI loops.
+---
 
-### 5. Advanced SaaS Upgrades (Phases 1-5)
-- **Sockets & Background CRONs**: Wired `socket.io` across standard Express HTTP servers alongside standard JWT handshake hooks. Coupled `node-cron` with emission events to universally push Notification Bell state to clients on-the-fly.
-- **Recharts Analytics Overlay**: Deployed dynamic bar, line, and pie graphs natively reading computed average resolution rates and monthly metric aggregations.
-- **Global Search UI & PDF Invoices**: Integrated `framer-motion` search `(cmd+k)` into the Navbar fetching across 4 collections. Included `jspdf` inside the Billing dashboard to export custom PDF statements.
-- **Community Feeds & Polling**: Constructed `Community.jsx` backed by `Post.js` and `Poll.js`, affording an infinite-scrolling social interface and live polling validation rules.
-- **Hardware Integration for Gate Security**: Reconfigured `Visitors.jsx` and backend endpoints with webcam functionality. Integrated `react-webcam` for Security Guards to seamlessly capture and append live photo IDs to visitor logs during manual entry.
+## 🏠 Resident Experience
 
-### 6. Task Flow Optimization & Real-Time Notifications
-- **Automated Resolution**: Removed the redundant "Resident Approval" step. Tasks now transition directly from `In Progress` to `Resolved` upon vendor completion, with performance metrics updated automatically.
-- **Reassignment Workflow**: Admins can now instantly reassign tasks that have been rejected by vendors via the "Reassign Vendor" action in the Complaints Hub.
-- **Real-time Notifications (Socket.IO)**: 
-    - **Vendors**: Receive instant alerts on new or reassigned tasks.
-    - **Residents**: Notified immediately when a vendor is assigned, when a vendor rejects a task (including the reason), and when a task is successfully resolved.
-- **Improved Transparency**: Rejection reasons provided by vendors are now clearly displayed to residents and admins within the task's resolution notes.
+### 4. Digital Maintenance Hub
+- **Ticket Deployment**: Residents can raise complaints with priority levels (Low/Medium/High) and specific location details.
+- **Real-Time Tracking**: Instant status updates (Assigned ➔ In Progress ➔ Resolved).
+- **Escalated Alerts**: Residents are notified if their task is overdue or if a vendor rejects an assignment.
+
+### 5. Security & Visitor Management
+- **Pre-Approval System**: Residents can pre-authorise guests, delivery agents, or service providers.
+- **Arrival Notifications**: Instant real-time alerts when a visitor enters the society gates.
+
+### 6. Community & Financials
+- **Invoices**: View billing history and download official PDF invoices for maintenance payments.
+- **Community Feed**: A social forum for society-wide discussions and updates.
+- **Live Polls**: Participate in democratic decision-making via secure, real-time polling.
+
+---
+
+## 👮 Security & Gate Operations
+
+### 7. Digital Gatekeeper
+- **Entry/Exit Logs**: Comprehensive digital records of every person entering or leaving the premises.
+- **Webcam Integration**: Guards capture live photo identification for all manual visitor entries.
+- **Pre-Approval Verification**: Instantly check guest credentials against resident-submitted pre-approvals.
+
+---
+
+## 🛠️ Vendor Operations
+
+### 8. Task Execution Portal
+- **Work Queue**: Mobile-optimised interface for vendors to manage their daily assignments.
+- **Lifecycle Actions**: Vendors can "Start Work" and "Mark Completed" directly from the dashboard.
+- **Rejection Protocol**: If unavailable, vendors can reject tasks with a mandatory reason, alerting admins for immediate reassignment.
+- **Real-Time Dispatch**: Instant alerts for new or reassigned tasks.
+
+---
+
+## 🌐 Platform-Wide Utilities
+
+### 9. Real-Time Notification System (Socket.IO)
+- **Universal Alerts**: A centralized notification bell system that pushes updates across all roles instantly.
+- **Handshake Security**: All real-time sockets are secured via JWT authentication.
+
+### 10. Global Commands & Search
+- **Cmd+K Search**: Rapidly find any ticket, resident, vendor, or visitor log from any page in the application.
+- **Universal Dashboard Layout**: Clean, responsive Glassmorphism UI ensuring usability on Tablets, Mobiles, and Desktops.
