@@ -1,4 +1,5 @@
 const express = require('express');
+const http = require('http');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -11,7 +12,14 @@ dotenv.config();
 // Connect to master database
 connectDB();
 
+// Init Background Cron Jobs
+const { initCronJobs } = require('./src/services/cronService');
+initCronJobs();
+
 const app = express();
+const server = http.createServer(app);
+const { initSocket } = require('./src/config/socket');
+initSocket(server);
 
 // Middleware
 app.use(express.json());
@@ -36,6 +44,9 @@ app.use('/api/dashboard', require('./src/routes/analyticsRoutes'));
 app.use('/api/users', require('./src/routes/userRoutes'));
 app.use('/api/notices', require('./src/routes/noticeRoutes'));
 app.use('/api/superadmin', require('./src/routes/superAdminRoutes'));
+app.use('/api/notifications', require('./src/routes/notificationRoutes'));
+app.use('/api/search', require('./src/routes/searchRoutes'));
+app.use('/api/feed', require('./src/routes/feedRoutes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -48,6 +59,6 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
 });

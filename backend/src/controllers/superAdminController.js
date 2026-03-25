@@ -3,6 +3,41 @@ const TenantSchema = require('../models/Tenant');
 const UserSchema = require('../models/User');
 
 const Tenant = mongoose.model('Tenant', TenantSchema);
+const BillSchema = require('../models/Bill');
+
+const getSuperAdminStats = async (req, res) => {
+  try {
+    const tenants = await Tenant.find({ status: 'Approved' });
+    let activeUsers = 0;
+    let revenue = 0;
+
+    for (const t of tenants) {
+      const dbName = `ssms_tenant_${t.tenantId}`;
+      const db = mongoose.connection.useDb(dbName, { useCache: true });
+      const TenantUser = db.model('User', UserSchema);
+      const Bill = db.model('Bill', BillSchema);
+      
+      activeUsers += await TenantUser.countDocuments({ status: 'Approved' });
+      
+      const paidBills = await Bill.aggregate([
+        { $match: { status: 'Paid' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]);
+      if (paidBills.length > 0) {
+        revenue += paidBills[0].total;
+      }
+    }
+
+    res.json({
+      societies: tenants.length,
+      activeUsers,
+      revenue
+    });
+  } catch (error) {
+    console.error('getSuperAdminStats error:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
 
 // @desc    Get all societies (Tenants) pending approval
 // @route   GET /api/superadmin/pending-societies
@@ -175,6 +210,7 @@ const createSociety = async (req, res) => {
 module.exports = {
   getSocieties,
   getPendingSocieties,
+  getSuperAdminStats,
   approveSociety,
   rejectSociety,
   createSociety

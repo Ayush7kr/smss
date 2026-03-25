@@ -23,15 +23,9 @@ const Vendors = () => {
 
   const fetchVendors = async () => {
     try {
-      const res = await api.get('/vendors');
-      // Adding mock rating and status dynamically for UI polish since schema only has basic fields
-      const enrichedVendors = res.data.map(v => ({
-        ...v,
-        rating: (Math.random() * (5.0 - 4.0) + 4.0).toFixed(1),
-        jobs: Math.floor(Math.random() * 100) + 10,
-        vendorStatus: v.status === 'Approved' ? 'Available' : 'Unavailable'
-      }));
-      setVendors(enrichedVendors);
+      // Calls the performance endpoint which already sorts by rating
+      const res = await api.get('/vendors/performance');
+      setVendors(res.data);
     } catch (err) {
       console.error('Failed to fetch vendors', err);
     } finally {
@@ -49,7 +43,7 @@ const Vendors = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
          <div>
             <h1 className="text-3xl font-bold tracking-tight">Vendor Directory</h1>
-            <p className="text-muted-foreground mt-1">Manage external contractors and approved service providers.</p>
+            <p className="text-muted-foreground mt-1">Manage external contractors and performance statistics.</p>
          </div>
          <div className="flex items-center gap-3 w-full md:w-auto">
             <div className="relative flex-1 md:w-64">
@@ -74,13 +68,13 @@ const Vendors = () => {
          className="bg-card border border-border rounded-2xl glass shadow-sm overflow-hidden"
       >
         <div className="overflow-x-auto">
-           <table className="w-full text-left border-collapse min-w-[800px]">
+           <table className="w-full text-left border-collapse min-w-[900px]">
               <thead>
                  <tr className="bg-muted/30 border-b border-border text-muted-foreground text-sm">
                     <th className="py-4 px-6 font-medium">Vendor Details</th>
                     <th className="py-4 px-6 font-medium">Service Category</th>
-                    <th className="py-4 px-6 font-medium">Performance Rating</th>
-                    <th className="py-4 px-6 font-medium">Status</th>
+                    <th className="py-4 px-6 font-medium">Performance Metrics</th>
+                    <th className="py-4 px-6 font-medium">Rating</th>
                     <th className="py-4 px-6 font-medium text-right">Contact Info</th>
                  </tr>
               </thead>
@@ -98,7 +92,7 @@ const Vendors = () => {
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: idx * 0.05 }}
-                          key={vendor.id} 
+                          key={vendor._id} 
                           className="border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors group"
                        >
                           <td className="py-4 px-6">
@@ -115,18 +109,33 @@ const Vendors = () => {
                           <td className="py-4 px-6">
                              <span className="text-sm font-medium bg-muted px-2 py-1 rounded-md text-foreground">{vendor.serviceType || 'General Service'}</span>
                           </td>
-                          <td className="py-4 px-6 flex flex-col justify-center gap-1">
-                             <div className="flex items-center gap-1 text-yellow-500">
-                                <Star size={14} className="fill-current" />
-                                <span className="text-sm font-bold text-foreground">{vendor.rating}</span>
-                                <span className="text-xs text-muted-foreground font-medium truncate">({vendor.jobs} jobs)</span>
+                          <td className="py-4 px-6">
+                             <div className="flex flex-col gap-1">
+                                <div className="text-xs font-semibold flex items-center justify-between w-32">
+                                   <span className="text-muted-foreground">Tasks:</span> 
+                                   <span className="text-foreground">{vendor.totalTasksAssigned || 0}</span>
+                                </div>
+                                <div className="text-[11px] flex items-center justify-between w-32 border-t border-border/50 pt-1">
+                                   <span className="text-green-500">On Time:</span> 
+                                   <span className="font-medium text-green-500">{vendor.completedOnTime || 0}</span>
+                                </div>
+                                <div className="text-[11px] flex items-center justify-between w-32 border-t border-border/50 pt-1">
+                                   <span className="text-orange-500">Late:</span> 
+                                   <span className="font-medium text-orange-500">{vendor.completedLate || 0}</span>
+                                </div>
+                                <div className="text-[11px] flex items-center justify-between w-32 border-t border-border/50 pt-1">
+                                   <span className="text-red-500">Failed/Escalated:</span> 
+                                   <span className="font-medium text-red-500">{vendor.failedTasks || 0}</span>
+                                </div>
                              </div>
                           </td>
-                          <td className="py-4 px-6">
-                             <span className={`text-xs px-2.5 py-1 border rounded-full font-bold inline-flex items-center gap-1.5 ${getStatusColor(vendor.vendorStatus)}`}>
-                                <span className="w-1.5 h-1.5 rounded-full bg-current shadow-[0_0_4px_currentColor]"></span>
-                                {vendor.vendorStatus}
-                             </span>
+                          <td className="py-4 px-6 flex flex-col justify-center gap-1">
+                             <div className="flex items-center gap-1 text-yellow-500">
+                                <Star size={16} className="fill-current" />
+                                <span className="text-base font-bold text-foreground">
+                                   {vendor.rating ? vendor.rating.toFixed(1) : '0.0'}
+                                </span>
+                             </div>
                           </td>
                           <td className="py-4 px-6 text-right">
                              <div className="flex items-center justify-end gap-2 pr-2 opacity-0 group-hover:opacity-100 transition-opacity">

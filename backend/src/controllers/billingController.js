@@ -1,4 +1,5 @@
 const BillSchema = require('../models/Bill');
+const UserSchema = require('../models/User');
 
 // @desc    Get all bills (Admin sees all, Resident sees their own)
 // @route   GET /api/billing
@@ -6,6 +7,7 @@ const BillSchema = require('../models/Bill');
 const getBills = async (req, res) => {
   try {
     const Bill = req.tenantDb.model('Bill', BillSchema);
+    req.tenantDb.model('User', UserSchema);
     
     let query = {};
     if (req.user.role === 'Resident') {

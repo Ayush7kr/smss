@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { 
   Building2, Users, AlertCircle, CalendarClock, 
   Wallet, ShieldCheck, Wrench, LayoutDashboard, ChevronLeft, ChevronRight,
-  Megaphone
+  Megaphone, MessageSquare
 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import clsx from 'clsx';
@@ -25,6 +25,7 @@ const roleLinks = {
     { name: 'Billing', path: '/billing', icon: Wallet },
     { name: 'Visitors', path: '/visitors', icon: ShieldCheck },
     { name: 'Vendors', path: '/vendors', icon: Wrench },
+    { name: 'Community', path: '/community', icon: MessageSquare },
   ],
   Resident: [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -32,15 +33,16 @@ const roleLinks = {
     { name: 'Complaints', path: '/complaints', icon: AlertCircle },
     { name: 'My Bills', path: '/billing', icon: Wallet },
     { name: 'Visitors', path: '/visitors', icon: ShieldCheck },
+    { name: 'Community', path: '/community', icon: MessageSquare },
   ],
   Security_Guard: [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Notice Board', path: '/notices', icon: Megaphone },
     { name: 'Visitors', path: '/visitors', icon: ShieldCheck },
+    { name: 'Community', path: '/community', icon: MessageSquare },
   ],
   Vendor: [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'Notice Board', path: '/notices', icon: Megaphone },
     { name: 'My Tasks', path: '/complaints', icon: Wrench },
   ]
 };

@@ -32,6 +32,48 @@ const getDashboardStats = async (req, res) => {
        const complaintsByCategory = await Complaint.aggregate([
           { $group: { _id: '$category', count: { $sum: 1 } } }
        ]);
+       const complaintStatusDistribution = await Complaint.aggregate([
+          { $group: { _id: '$status', count: { $sum: 1 } } }
+       ]);
+
+       // Advanced Metrics
+       const resolvedComplaints = await Complaint.find({ status: { $in: ['Resolved', 'Verified', 'Completed'] }, completionDate: { $exists: true } });
+       let totalResolutionTime = 0;
+       resolvedComplaints.forEach(c => {
+         totalResolutionTime += (new Date(c.completionDate) - new Date(c.createdAt));
+       });
+       const avgResolutionTimeDays = resolvedComplaints.length > 0 ? (totalResolutionTime / resolvedComplaints.length) / (1000 * 60 * 60 * 24) : 0;
+       
+       const completedComplaints = resolvedComplaints.length;
+       const onTimeComplaints = await Complaint.countDocuments({ status: { $in: ['Resolved', 'Verified', 'Completed'] }, isOverdue: false });
+       const percentOnTime = completedComplaints > 0 ? (onTimeComplaints / completedComplaints) * 100 : 0;
+
+       const overdueComplaintsCount = await Complaint.countDocuments({ isOverdue: true, status: { $nin: ['Resolved', 'Verified'] } });
+       const vendorPerformance = await User.find({ role: 'Vendor' }).select('name rating completedOnTime completedLate failedTasks totalTasksAssigned').limit(10);
+
+       const sixMonthsAgo = new Date();
+       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+       const monthlyRevenue = await Bill.aggregate([
+          { $match: { status: 'Paid', updatedAt: { $gte: sixMonthsAgo } } },
+          { $group: { _id: { month: { $month: "$updatedAt" }, year: { $year: "$updatedAt" } }, revenue: { $sum: '$amount' } } },
+          { $sort: { "_id.year": 1, "_id.month": 1 } }
+       ]);
+
+       const totalBillsGenerated = await Bill.countDocuments();
+       const paymentSuccessRate = totalBillsGenerated > 0 ? (totalBillsPaid / totalBillsGenerated) * 100 : 0;
+
+       // Activity Feed
+       const recentUsers = await User.find({ role: 'Resident' }).sort({ createdAt: -1 }).limit(3).select('name flatNumber createdAt');
+       const recentComplaintsDB = await Complaint.find().sort({ createdAt: -1 }).limit(3).select('category location createdAt');
+       const recentVisitors = await Visitor.find({ status: 'Approved' }).sort({ createdAt: -1 }).limit(3).select('name resident createdAt');
+
+       const activity = [
+          ...recentUsers.map(u => ({ type: 'user', title: 'New Resident Onboarded', desc: `Flat ${u.flatNumber || 'N/A'}`, date: u.createdAt || new Date() })),
+          ...recentComplaintsDB.map(c => ({ type: 'complaint', title: `${c.category || 'General'} issue raised`, desc: c.location || 'N/A', date: c.createdAt || new Date() })),
+          ...recentVisitors.map(v => ({ type: 'visitor', title: 'Visitor Approved', desc: `${v.name || 'Guest'}`, date: v.createdAt || new Date() }))
+       ];
+       activity.sort((a, b) => b.date - a.date);
+       const recentActivity = activity.slice(0, 5);
 
        return res.json({
            totalResidents,
@@ -39,7 +81,15 @@ const getDashboardStats = async (req, res) => {
            todaysVisitors,
            totalBillsPaid,
            totalBillsPending,
-           complaintsByCategory
+           complaintsByCategory,
+           complaintStatusDistribution,
+           recentActivity,
+           avgResolutionTimeDays,
+           percentOnTime,
+           overdueComplaintsCount,
+           vendorPerformance,
+           monthlyRevenue,
+           paymentSuccessRate
        });
     }
 

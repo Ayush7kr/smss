@@ -20,6 +20,13 @@ const userSchema = new mongoose.Schema({
     default: 'Pending'
   },
   serviceType: { type: String }, // For vendors (e.g. Plumber, Electrician)
+  // Vendor performance metrics
+  totalTasksAssigned: { type: Number, default: 0 },
+  activeTasks: { type: Number, default: 0 },
+  completedOnTime: { type: Number, default: 0 },
+  completedLate: { type: Number, default: 0 },
+  failedTasks: { type: Number, default: 0 },
+  rating: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 });
 

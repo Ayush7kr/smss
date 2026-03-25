@@ -10,8 +10,11 @@ import Billing from './pages/dashboards/Billing';
 import Visitors from './pages/dashboards/Visitors';
 import Vendors from './pages/dashboards/Vendors';
 import Societies from './pages/dashboards/Societies';
+import Community from './pages/dashboards/Community';
 import { useContext } from 'react';
 import { AuthContext } from './context/AuthContext';
+import { SocketProvider } from './context/SocketContext';
+import { Toaster } from 'react-hot-toast';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useContext(AuthContext);
@@ -29,30 +32,34 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
 function App() {
   return (
-    <Router>
-      <Routes>
-         <Route path="/" element={<Landing />} />
-         <Route path="/login" element={<Login />} />
-         
-         <Route path="/" element={
-            <ProtectedRoute>
-               <DashboardLayout />
-            </ProtectedRoute>
-         }>
-            <Route path="dashboard" element={<Dashboard />} />
-            {/* Other routes will go here later */}
-            <Route path="societies" element={<Societies />} />
-            <Route path="residents" element={<Residents />} />
-            <Route path="notices" element={<NoticeBoard />} />
-            <Route path="complaints" element={<Complaints />} />
-            <Route path="billing" element={<Billing />} />
-            <Route path="visitors" element={<Visitors />} />
-            <Route path="vendors" element={<Vendors />} />
-         </Route>
+    <SocketProvider>
+      <Toaster position="top-right" />
+      <Router>
+        <Routes>
+           <Route path="/" element={<Landing />} />
+           <Route path="/login" element={<Login />} />
+           
+           <Route path="/" element={
+              <ProtectedRoute>
+                 <DashboardLayout />
+              </ProtectedRoute>
+           }>
+              <Route path="dashboard" element={<Dashboard />} />
+              {/* Other routes will go here later */}
+              <Route path="societies" element={<Societies />} />
+              <Route path="residents" element={<Residents />} />
+              <Route path="notices" element={<NoticeBoard />} />
+              <Route path="complaints" element={<Complaints />} />
+              <Route path="billing" element={<Billing />} />
+              <Route path="visitors" element={<Visitors />} />
+              <Route path="vendors" element={<Vendors />} />
+              <Route path="community" element={<Community />} />
+           </Route>
 
-         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+           <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </SocketProvider>
   );
 }
 

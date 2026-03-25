@@ -10,9 +10,8 @@ const getPendingUsers = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized as Society Admin' });
     }
 
-    const User = req.tenantDb.model('User', UserSchema);
-    const users = await User.find({ status: 'Pending' }).select('-password').sort({ createdAt: -1 });
-
+    const User = req.tenantDb.models.User || req.tenantDb.model('User', UserSchema);
+    const users = await User.find({ status: 'Pending' }).select('-password').sort({ createdAt: -1 }).lean();
     res.json(users);
   } catch (error) {
     console.error('Fetch Pending Users Error:', error);
@@ -48,8 +47,8 @@ const updateUserStatus = async (req, res) => {
       return res.status(400).json({ message: 'Invalid status' });
     }
 
-    const User = req.tenantDb.model('User', UserSchema);
-    const user = await User.findById(req.params.id);
+    const User = req.tenantDb.models.User || req.tenantDb.model('User', UserSchema);
+    let user = await User.findById(req.params.id);
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -76,7 +75,7 @@ const updateUserStatus = async (req, res) => {
 // @access  Private
 const getVendors = async (req, res) => {
   try {
-    const User = req.tenantDb.model('User', UserSchema);
+    const User = req.tenantDb.models.User || req.tenantDb.model('User', UserSchema);
     const vendors = await User.find({ role: 'Vendor', status: 'Approved' }).select('-password').sort({ name: 1 });
     res.json(vendors);
   } catch (error) {

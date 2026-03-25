@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middleware/auth');
-const { getSocieties, getPendingSocieties, approveSociety, rejectSociety, createSociety } = require('../controllers/superAdminController');
+const { getSocieties, getPendingSocieties, getSuperAdminStats, approveSociety, rejectSociety, createSociety } = require('../controllers/superAdminController');
 
 // All routes here are restricted to Super_Admin
 router.use(protect);
 router.use(authorize('Super_Admin'));
 
+router.get('/stats', getSuperAdminStats);
 router.get('/societies', getSocieties);
 router.get('/societies/pending', getPendingSocieties);
 router.post('/societies', createSociety);

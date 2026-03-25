@@ -7,6 +7,7 @@ const UserSchema = require('../models/User');
 const getVisitors = async (req, res) => {
   try {
     const Visitor = req.tenantDb.model('Visitor', VisitorSchema);
+    req.tenantDb.model('User', UserSchema);
     
     let query = {};
     if (req.user.role === 'Resident') {
@@ -75,7 +76,10 @@ const updateVisitor = async (req, res) => {
     // Guard logging exit
     else if (req.user.role === 'Security_Guard') {
        if (exitTime) visitor.exitTime = exitTime;
-       else visitor.exitTime = Date.now();
+       else {
+          visitor.exitTime = Date.now();
+          visitor.status = 'Checked Out';
+       }
     } else {
        return res.status(403).json({ message: 'Not authorized' });
     }

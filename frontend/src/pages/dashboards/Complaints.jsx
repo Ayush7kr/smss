@@ -1,13 +1,19 @@
 import { useState, useEffect, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Search, Filter, MessageSquare, MoreVertical, Plus, CheckCircle } from 'lucide-react';
+import { AlertCircle, Search, Filter, MessageSquare, Plus, CheckCircle, Clock } from 'lucide-react';
 import api from '../../utils/api';
 import { AuthContext } from '../../context/AuthContext';
 
 const getStatusColor = (status) => {
   switch(status) {
-    case 'Pending': return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
-    case 'In Progress': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+    case 'Pending': return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
+    case 'Assigned': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+    case 'In Progress': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+    case 'Completed': return 'bg-purple-500/10 text-purple-500 border-purple-500/20';
+    case 'Verified': return 'bg-green-500/10 text-green-500 border-green-500/20';
+    case 'Escalated': return 'bg-red-500/10 text-red-500 border-red-500/20';
+    case 'Rejected by Vendor': return 'bg-red-500/10 text-red-500 border-red-500/20';
+    case 'Reassigned': return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
     case 'Resolved': return 'bg-green-500/10 text-green-500 border-green-500/20';
     default: return 'bg-muted text-muted-foreground border-border';
   }
@@ -22,6 +28,19 @@ const getPriorityColor = (priority) => {
   }
 };
 
+const getCountdown = (dueDate, status) => {
+  if (!dueDate || status === 'Completed' || status === 'Verified' || status === 'Resolved') return null;
+  const due = new Date(dueDate);
+  const now = new Date();
+  const diffTime = due - now;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 0) return { text: 'Overdue', color: 'text-red-500 bg-red-500/10' };
+  if (diffDays === 0) return { text: 'Due Today', color: 'text-orange-500 bg-orange-500/10' };
+  if (diffDays <= 2) return { text: `${diffDays} days left`, color: 'text-yellow-500 bg-yellow-500/10' };
+  return { text: `${diffDays} days left`, color: 'text-muted-foreground bg-muted' };
+};
+
 const Complaints = () => {
   const { user } = useContext(AuthContext);
   const [complaints, setComplaints] = useState([]);
@@ -32,8 +51,11 @@ const Complaints = () => {
   const [newTicket, setNewTicket] = useState({ category: 'Maintenance', description: '', location: '', priority: 'Low' });
   const [submitting, setSubmitting] = useState(false);
 
-  // Vendor assignment state
+  // Vendor assignment & rejection state
   const [isAssigning, setIsAssigning] = useState(null); // complaint object
+  const [isRejecting, setIsRejecting] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [assignDueDate, setAssignDueDate] = useState('');
   const [vendors, setVendors] = useState([]);
   const [vendorSearch, setVendorSearch] = useState('');
   const [assigningLoading, setAssigningLoading] = useState(false);
@@ -47,7 +69,7 @@ const Complaints = () => {
 
   const fetchVendors = async () => {
     try {
-      const res = await api.get('/users/vendors');
+      const res = await api.get('/vendors/performance');
       setVendors(res.data);
     } catch (err) {
       console.error('Failed to fetch vendors', err);
@@ -62,6 +84,21 @@ const Complaints = () => {
       console.error('Failed to get complaints', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAction = async (complaintId, action, payload = {}) => {
+    try {
+      const res = await api.put(`/complaints/${complaintId}/${action}`, payload);
+      setComplaints(complaints.map(c => c._id === complaintId ? res.data : c));
+      
+      if (action === 'reject') {
+         setIsRejecting(null);
+         setRejectReason('');
+      }
+    } catch (err) {
+       console.error(`Failed to ${action}`, err);
+       alert(`Failed to ${action}`);
     }
   };
 
@@ -82,11 +119,17 @@ const Complaints = () => {
   };
 
   const handleAssignVendor = async (complaintId, vendorId) => {
+    if (!assignDueDate) {
+       alert('Please select a due date');
+       return;
+    }
     setAssigningLoading(true);
     try {
-      const res = await api.put(`/complaints/${complaintId}`, { vendorId, status: 'Assigned' });
+      const action = isAssigning.status === 'Pending' ? 'assign' : 'reassign';
+      const res = await api.put(`/complaints/${complaintId}/${action}`, { vendorId, dueDate: assignDueDate });
       setComplaints(complaints.map(c => c._id === complaintId ? res.data : c));
       setIsAssigning(null);
+      setAssignDueDate('');
     } catch (err) {
       console.error('Failed to assign vendor', err);
       alert('Failed to assign vendor');
@@ -107,11 +150,11 @@ const Complaints = () => {
   );
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-6 max-w-[1400px] mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
          <div>
             <h1 className="text-3xl font-bold tracking-tight">Complaints Hub</h1>
-            <p className="text-muted-foreground mt-1">Review, assign, and resolve resident issues.</p>
+            <p className="text-muted-foreground mt-1">Review, assign, and resolve resident issues with deadlines.</p>
          </div>
          <div className="flex items-center gap-3 w-full md:w-auto">
             <div className="relative flex-1 md:w-64">
@@ -154,11 +197,21 @@ const Complaints = () => {
                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
                  animate={{ opacity: 1, scale: 1, y: 0 }}
                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                 className="bg-card border border-border w-full max-w-lg p-6 rounded-2xl shadow-2xl relative z-10 flex flex-col max-h-[80vh]"
+                 className="bg-card border border-border w-full max-w-2xl p-6 rounded-2xl shadow-2xl relative z-10 flex flex-col max-h-[85vh]"
                >
-                  <h3 className="text-xl font-bold mb-2">Assign Vendor</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Select a vendor for: <span className="text-foreground font-medium">{isAssigning.category}</span></p>
+                  <h3 className="text-xl font-bold mb-2">Assign to Vendor</h3>
+                  <p className="text-sm text-muted-foreground mb-4">Set deadline and assign vendor for: <span className="text-foreground font-medium">{isAssigning.category}</span></p>
                   
+                  <div className="mb-4">
+                     <label className="block text-sm font-semibold mb-1">Task Deadline (Due Date)</label>
+                     <input 
+                        type="datetime-local" 
+                        value={assignDueDate}
+                        onChange={(e) => setAssignDueDate(e.target.value)}
+                        className="w-full px-4 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/50"
+                     />
+                  </div>
+
                   <div className="relative mb-4">
                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                      <input 
@@ -175,29 +228,38 @@ const Complaints = () => {
                         <p className="text-center py-8 text-muted-foreground italic">No matching vendors found.</p>
                      ) : (
                         filteredVendors.map(vendor => (
-                           <div key={vendor._id} className="flex items-center justify-between p-3 rounded-xl border border-border hover:bg-muted/50 transition-colors">
-                              <div className="flex items-center gap-3">
+                           <div key={vendor._id} className="flex items-center justify-between p-4 rounded-xl border border-border hover:bg-muted/50 transition-colors">
+                              <div className="flex items-center gap-4">
                                  <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
                                     {vendor.name.charAt(0)}
                                  </div>
                                  <div>
-                                    <p className="font-bold text-sm">{vendor.name}</p>
+                                    <p className="font-bold text-sm flex items-center gap-2">
+                                       {vendor.name} 
+                                       <span className="text-yellow-500 text-xs flex items-center gap-1">★ {vendor.rating?.toFixed(1) || '0.0'}</span>
+                                    </p>
                                     <p className="text-xs text-muted-foreground">{vendor.serviceType || 'General Service'} • {vendor.phone}</p>
                                  </div>
                               </div>
-                              <button 
-                                 onClick={() => handleAssignVendor(isAssigning._id, vendor._id)}
-                                 disabled={assigningLoading}
-                                 className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-bold hover:bg-primary/90"
-                              >
-                                 Assign
-                              </button>
+                              <div className="flex flex-col items-end gap-2">
+                                 <div className="flex gap-2 text-xs text-muted-foreground">
+                                    <span className="text-green-500">{vendor.completedOnTime || 0} On Time</span>
+                                    <span className="text-red-500">{vendor.failedTasks || 0} Failed</span>
+                                 </div>
+                                 <button 
+                                    onClick={() => handleAssignVendor(isAssigning._id, vendor._id)}
+                                    disabled={assigningLoading || !assignDueDate}
+                                    className="px-4 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                 >
+                                    Assign & Notify
+                                 </button>
+                              </div>
                            </div>
                         ))
                      )}
                   </div>
 
-                  <div className="flex justify-end mt-6">
+                  <div className="flex justify-end mt-4 pt-4 border-t border-border">
                      <button 
                         onClick={() => setIsAssigning(null)}
                         className="px-4 py-2 text-sm font-medium hover:bg-muted rounded-lg"
@@ -208,9 +270,40 @@ const Complaints = () => {
                </motion.div>
             </div>
          )}
-      </AnimatePresence>
+       </AnimatePresence>
 
-      <AnimatePresence>
+       <AnimatePresence>
+         {isRejecting && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsRejecting(null)} className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
+               <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-card border border-border w-full max-w-md p-6 rounded-2xl shadow-2xl relative z-10 flex flex-col">
+                  <h3 className="text-xl font-bold mb-2 text-red-500">Reject Task</h3>
+                  <p className="text-sm text-muted-foreground mb-4">Please provide a valid reason for missing or rejecting this task.</p>
+                  
+                  <textarea 
+                     value={rejectReason}
+                     onChange={(e) => setRejectReason(e.target.value)}
+                     placeholder="State your reason here..."
+                     className="w-full px-4 py-3 bg-background border border-border rounded-xl text-sm min-h-[100px] mb-4 focus:outline-none focus:ring-2 focus:ring-red-500/50 resize-y"
+                     required
+                  />
+
+                  <div className="flex justify-end gap-3 pt-2">
+                     <button onClick={() => setIsRejecting(null)} className="px-4 py-2 text-sm font-medium hover:bg-muted rounded-lg transition-colors">Cancel</button>
+                     <button 
+                        onClick={() => handleAction(isRejecting._id, 'reject', { reason: rejectReason })}
+                        disabled={!rejectReason.trim()}
+                        className="px-5 py-2 bg-red-500 text-white rounded-lg text-sm font-bold hover:bg-red-600 disabled:opacity-50 transition-colors"
+                     >
+                        Submit Rejection
+                     </button>
+                  </div>
+               </motion.div>
+            </div>
+         )}
+       </AnimatePresence>
+
+       <AnimatePresence>
          {isCreating && (
             <motion.div 
                initial={{ opacity: 0, height: 0 }}
@@ -248,7 +341,7 @@ const Complaints = () => {
                      </div>
                   </div>
                   <div>
-                     <label className="block text-sm font-medium mb-1">Location Details (e.g. Master Bedroom, Gym)</label>
+                     <label className="block text-sm font-medium mb-1">Location Details</label>
                      <input 
                         type="text" 
                         value={newTicket.location} 
@@ -278,99 +371,174 @@ const Complaints = () => {
                </form>
             </motion.div>
          )}
-      </AnimatePresence>
+       </AnimatePresence>
 
-      <motion.div 
-         initial={{ opacity: 0, y: 20 }}
-         animate={{ opacity: 1, y: 0 }}
-         className="bg-card border border-border rounded-2xl glass shadow-sm overflow-hidden"
-      >
-        <div className="overflow-x-auto">
-           <table className="w-full text-left border-collapse min-w-[800px]">
-              <thead>
-                 <tr className="bg-muted/30 border-b border-border text-muted-foreground text-sm">
-                    <th className="py-4 px-6 font-medium">Ticket ID</th>
-                    <th className="py-4 px-6 font-medium">Issue Details</th>
-                    <th className="py-4 px-6 font-medium">Priority</th>
-                    <th className="py-4 px-6 font-medium">Status</th>
-                    <th className="py-4 px-6 font-medium">Date Raised</th>
-                    <th className="py-4 px-6 font-medium text-right">Actions</th>
-                 </tr>
-              </thead>
-              <tbody>
-                 {filteredComplaints.length === 0 ? (
-                    <tr>
-                       <td colSpan="6" className="py-12 text-center text-muted-foreground">
-                          <AlertCircle size={48} className="mx-auto mb-4 opacity-20" />
-                          <p>No complaints match your search.</p>
-                       </td>
-                    </tr>
-                 ) : (
-                    filteredComplaints.map((complaint, idx) => (
-                       <motion.tr 
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: idx * 0.05 }}
-                          key={complaint.id} 
-                          className="border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors group cursor-pointer"
-                       >
-                          <td className="py-4 px-6 font-mono text-sm font-semibold">{complaint._id.slice(-6).toUpperCase()}</td>
-                           <td className="py-4 px-6">
-                             <p className="font-bold text-foreground line-clamp-1">{complaint.description}</p>
-                             <div className="flex items-center gap-2 mt-1">
-                                <span className="text-xs font-semibold text-muted-foreground">{complaint.category}</span>
-                                <span className="w-1 h-1 rounded-full bg-muted-foreground/50"></span>
-                                <span className="text-xs text-muted-foreground">Loc: {complaint.location || 'N/A'}</span>
-                                {complaint.resident && (
+       <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-card border border-border rounded-2xl glass shadow-sm overflow-hidden overflow-x-auto pb-4"
+       >
+          <table className="w-full text-left border-collapse min-w-[1000px]">
+             <thead>
+                <tr className="bg-muted/30 border-b border-border text-muted-foreground text-sm">
+                   <th className="py-4 px-6 font-medium">Ticket / Issue</th>
+                   <th className="py-4 px-6 font-medium">Assignment</th>
+                   <th className="py-4 px-6 font-medium">Priority</th>
+                   <th className="py-4 px-6 font-medium">Status & Deadline</th>
+                   <th className="py-4 px-6 font-medium">Date Raised</th>
+                   <th className="py-4 px-6 text-right font-medium">Actions</th>
+                </tr>
+             </thead>
+             <tbody className="divide-y divide-border/50">
+                {filteredComplaints.length === 0 ? (
+                   <tr>
+                      <td colSpan="6" className="py-12 text-center text-muted-foreground">
+                         <AlertCircle size={48} className="mx-auto mb-4 opacity-20" />
+                         <p>No complaints match your search.</p>
+                      </td>
+                   </tr>
+                ) : (
+                   filteredComplaints.map((complaint, idx) => {
+                      const countdown = getCountdown(complaint.dueDate, complaint.status);
+                      return (
+                      <motion.tr 
+                         initial={{ opacity: 0, y: 10 }}
+                         animate={{ opacity: 1, y: 0 }}
+                         transition={{ delay: idx * 0.05 }}
+                         key={complaint._id} 
+                         className="hover:bg-muted/20 transition-colors group cursor-default"
+                      >
+                          <td className="py-4 px-6">
+                            <div className="flex items-center gap-2 mb-1">
+                               <span className="font-mono text-xs font-semibold bg-muted px-2 py-0.5 rounded text-muted-foreground">
+                                  {complaint._id.slice(-6).toUpperCase()}
+                               </span>
+                               <span className="text-xs font-bold text-foreground">{complaint.category}</span>
+                            </div>
+                            <p className="font-medium text-foreground line-clamp-2 max-w-sm">{complaint.description}</p>
+                            {complaint.resolutionNotes && (
+                               <div className="mt-1.5 p-2 bg-muted/50 rounded-lg text-xs border border-border/50">
+                                  <span className="font-bold text-foreground">Note: </span>
+                                  <span className="text-muted-foreground italic">{complaint.resolutionNotes}</span>
+                               </div>
+                            )}
+                            <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
+                               <span>Loc: {complaint.location || 'N/A'}</span>
+                               {complaint.resident && (
+                                  <>
+                                     <span className="w-1 h-1 rounded-full bg-muted-foreground/50"></span>
+                                     <span>{complaint.resident.name} (Flat {complaint.resident.flatNumber || 'Mngmt'})</span>
+                                  </>
+                               )}
+                            </div>
+                         </td>
+                         <td className="py-4 px-6">
+                            {complaint.assignedVendorId ? (
+                               <div className="text-sm">
+                                  <p className="font-semibold text-foreground flex items-center gap-1">
+                                     {complaint.assignedVendorId.name} 
+                                     {complaint.status === 'Completed' && <CheckCircle size={14} className="text-green-500" />}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">{complaint.assignedVendorId.phone || 'No phone'}</p>
+                               </div>
+                            ) : (
+                               <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">Unassigned</span>
+                            )}
+                         </td>
+                         <td className="py-4 px-6">
+                            <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${getPriorityColor(complaint.priority)}`}>
+                               {complaint.priority}
+                            </span>
+                         </td>
+                         <td className="py-4 px-6">
+                            <div className="flex flex-col items-start gap-1.5">
+                               <span className={`text-xs px-2.5 py-1 border rounded-full font-bold inline-flex items-center gap-1.5 ${getStatusColor(complaint.status)}`}>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                                  {complaint.status}
+                               </span>
+                               {countdown && (
+                                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1 ${countdown.color}`}>
+                                     <Clock size={10} /> {countdown.text}
+                                  </span>
+                               )}
+                               {complaint.dueDate && (
+                                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                     Due: {new Date(complaint.dueDate).toLocaleDateString()}
+                                  </span>
+                               )}
+                            </div>
+                         </td>
+                         <td className="py-4 px-6 text-sm text-muted-foreground font-medium">
+                            {new Date(complaint.createdAt).toLocaleDateString()}
+                         </td>
+                         <td className="py-4 px-6 text-right align-top">
+                             <div className="flex flex-col items-end gap-2">
+                                {/* Admin Actions */}
+                                {(user?.role === 'Society_Admin' || user?.role === 'Super_Admin') && (
                                    <>
-                                      <span className="w-1 h-1 rounded-full bg-muted-foreground/50"></span>
-                                      <span className="text-xs text-muted-foreground">{complaint.resident.name} - Flat {complaint.resident.flatNumber || 'Mngmt'}</span>
+                                     {(complaint.status === 'Pending' || complaint.status === 'Escalated' || complaint.status === 'Reassigned' || complaint.status === 'Rejected by Vendor') && (
+                                        <button 
+                                           onClick={() => setIsAssigning(complaint)}
+                                           className="px-3 py-1.5 bg-primary/10 text-primary text-xs font-bold rounded-lg hover:bg-primary hover:text-white transition-colors"
+                                        >
+                                           {complaint.status === 'Pending' ? 'Assign Vendor' : 'Reassign Vendor'}
+                                        </button>
+                                     )}
                                    </>
                                 )}
+
+                                {/* Resident Actions */}
+                                {user?.role === 'Resident' && (
+                                   <>
+                                     {countdown && countdown.text === 'Overdue' && !['Completed', 'Escalated', 'Resolved'].includes(complaint.status) && (
+                                        <button 
+                                           onClick={() => handleAction(complaint._id, 'escalate')}
+                                           className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-colors shadow-md animate-pulse"
+                                        >
+                                           Report Delay
+                                        </button>
+                                     )}
+                                   </>
+                                )}
+
+                                {/* Vendor Actions */}
+                                {user?.role === 'Vendor' && (
+                                   <>
+                                     {(complaint.status === 'Assigned' || complaint.status === 'Reassigned') && (
+                                        <div className="flex flex-col gap-2 w-full items-end">
+                                           <button 
+                                              onClick={() => handleAction(complaint._id, 'start')}
+                                              className="px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors shadow-md w-full text-center"
+                                           >
+                                              Start Work
+                                           </button>
+                                           <button 
+                                              onClick={() => setIsRejecting(complaint)}
+                                              className="px-3 py-1.5 bg-red-500/10 text-red-500 text-xs font-bold rounded-lg hover:bg-red-500 hover:text-white transition-colors w-full text-center"
+                                           >
+                                              Reject Task
+                                           </button>
+                                        </div>
+                                     )}
+                                     {complaint.status === 'In Progress' && (
+                                        <button 
+                                           onClick={() => handleAction(complaint._id, 'complete')}
+                                           className="px-3 py-1.5 bg-green-500 text-white text-xs font-bold rounded-lg hover:bg-green-600 transition-colors shadow-md"
+                                        >
+                                           Mark Completed
+                                        </button>
+                                     )}
+                                   </>
+                                )}
+                                
                              </div>
-                             {complaint.vendor && (
-                                <div className="mt-2 text-xs flex items-center gap-2 text-primary font-medium bg-primary/5 w-fit px-2 py-1 rounded">
-                                   <CheckCircle size={12} />
-                                   Assigned: {complaint.vendor.name} ({complaint.vendor.phone || 'No phone'})
-                                </div>
-                             )}
-                          </td>
-                          <td className="py-4 px-6">
-                             <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${getPriorityColor(complaint.priority)}`}>
-                                {complaint.priority}
-                             </span>
-                          </td>
-                          <td className="py-4 px-6">
-                             <span className={`text-xs px-2.5 py-1 border rounded-full font-bold inline-flex items-center gap-1.5 ${getStatusColor(complaint.status)}`}>
-                                <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                                {complaint.status}
-                             </span>
-                          </td>
-                          <td className="py-4 px-6 text-sm text-muted-foreground font-medium">
-                             {new Date(complaint.createdAt).toLocaleDateString()}
-                          </td>
-                          <td className="py-4 px-6 text-right">
-                              <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                 {(user?.role === 'Society_Admin' || user?.role === 'Super_Admin') && complaint.status === 'Pending' && (
-                                    <button 
-                                       onClick={(e) => { e.stopPropagation(); setIsAssigning(complaint); }}
-                                       className="px-3 py-1.5 bg-primary/10 text-primary text-xs font-bold rounded-lg hover:bg-primary hover:text-white transition-all transition-colors"
-                                    >
-                                       Assign Vendor
-                                    </button>
-                                 )}
-                                 <button className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors" title="Message Resident">
-                                    <MessageSquare size={18} />
-                                 </button>
-                              </div>
-                           </td>
-                       </motion.tr>
-                    ))
-                 )}
-              </tbody>
-           </table>
-        </div>
-      </motion.div>
+                         </td>
+                      </motion.tr>
+                   )})
+                )}
+             </tbody>
+          </table>
+       </motion.div>
     </div>
   );
 };

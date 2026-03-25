@@ -40,7 +40,7 @@ const registerUser = async (req, res) => {
     }
 
     // 4. Compile Model for that DB
-    const User = dbToUse.model('User', UserSchema);
+    const User = dbToUse.models.User || dbToUse.model('User', UserSchema);
 
     // 5. Check if user exists
     const userExists = await User.findOne({ email });

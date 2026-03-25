@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Wallet, Search, Filter, Download, DollarSign, Plus, CheckCircle } from 'lucide-react';
 import api from '../../utils/api';
 import { AuthContext } from '../../context/AuthContext';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const getStatusColor = (status) => {
   switch(status) {
@@ -68,6 +70,60 @@ const Billing = () => {
       console.error('Failed to pay bill', err);
       alert('Payment failed');
     }
+  };
+
+  const handleDownloadPDF = (invoice) => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(24);
+    doc.setTextColor(79, 70, 229); // Primary color
+    doc.text('INVOICE', 14, 22);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Invoice ID: ${invoice._id.slice(-8).toUpperCase()}`, 14, 32);
+    doc.text(`Generated Date: ${new Date().toLocaleDateString()}`, 14, 38);
+    doc.text(`Status: ${invoice.status}`, 14, 44);
+    
+    // Billed To
+    doc.setTextColor(0);
+    doc.setFontSize(14);
+    doc.text('Billed To:', 14, 60);
+    doc.setFontSize(11);
+    doc.text(invoice.resident?.name || 'Resident', 14, 68);
+    doc.text(`Flat ${invoice.resident?.flatNumber || 'N/A'}`, 14, 74);
+    if (invoice.resident?.email) doc.text(invoice.resident?.email, 14, 80);
+
+    // Styled Table
+    doc.autoTable({
+      startY: 95,
+      head: [['Description', 'Billing Month', 'Due Date', 'Amount']],
+      body: [
+        [
+          invoice.description,
+          invoice.month,
+          new Date(invoice.dueDate).toLocaleDateString(),
+          `Rs.${invoice.amount?.toLocaleString()}`
+        ],
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [79, 70, 229], textColor: 255, fontSize: 11 },
+      styles: { fontSize: 10, cellPadding: 6 },
+    });
+    
+    // Total section
+    const finalY = doc.lastAutoTable.finalY || 120;
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text(`Total Due: Rs.${invoice.amount?.toLocaleString()}`, 14, finalY + 15);
+    
+    // Footer
+    doc.setFontSize(10);
+    doc.setTextColor(150);
+    doc.text('Thank you for being a part of our Society.', 14, finalY + 35);
+
+    doc.save(`Invoice_${invoice._id.slice(-6)}.pdf`);
   };
 
   const filteredInvoices = bills.filter(i => 
@@ -206,17 +262,17 @@ const Billing = () => {
                                 {invoice.status}
                              </span>
                           </td>
-                          <td className="py-4 px-6 text-right">
-                             {user?.role === 'Resident' && invoice.status !== 'Paid' ? (
-                               <button onClick={() => handlePayBill(invoice._id)} className="bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition-colors">
-                                  <DollarSign size={14} /> Pay Now
-                               </button>
-                             ) : (
-                               <button className="pr-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity hover:underline inline-flex items-center gap-1 font-medium text-sm">
-                                  <Download size={14} /> Receipt
-                               </button>
-                             )}
-                          </td>
+                           <td className="py-4 px-6 text-right">
+                              {user?.role === 'Resident' && invoice.status !== 'Paid' ? (
+                                <button onClick={() => handlePayBill(invoice._id)} className="bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition-colors">
+                                   <DollarSign size={14} /> Pay Now
+                                </button>
+                              ) : (
+                                <button onClick={() => handleDownloadPDF(invoice)} className="pr-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity hover:underline inline-flex items-center gap-1 font-medium text-sm">
+                                   <Download size={14} /> Receipt
+                                </button>
+                              )}
+                           </td>
                        </motion.tr>
                     ))
                  )}

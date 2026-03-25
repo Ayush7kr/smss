@@ -1,13 +1,27 @@
 import { useState, useEffect } from 'react';
-// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { Building2, Users, CreditCard, Activity, ArrowUpRight, CheckCircle, XCircle } from 'lucide-react';
-import { Line } from 'react-chartjs-2';
-import 'chart.js/auto';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import axios from 'axios';
 
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-popover border border-border p-3 rounded-lg shadow-xl">
+        <p className="font-bold text-sm mb-1">{label}</p>
+        <p className="text-sm flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-primary" />
+          <span className="text-muted-foreground">{payload[0].name}:</span>
+          <span className="font-bold">${payload[0].value}</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 const SuperAdminDashboard = () => {
-  const [stats, setStats] = useState({ societies: 5, activeUsers: 1204, revenue: 12500 });
+  const [stats, setStats] = useState({ societies: 0, activeUsers: 0, revenue: 0 });
   const [pendingSocieties, setPendingSocieties] = useState([]);
   const [actionLoading, setActionLoading] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -16,7 +30,17 @@ const SuperAdminDashboard = () => {
 
   useEffect(() => {
     fetchPendingSocieties();
+    fetchStats();
   }, []);
+
+  const fetchStats = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/superadmin/stats', { withCredentials: true });
+      setStats(res.data);
+    } catch (err) {
+      console.error('Error fetching stats:', err);
+    }
+  };
 
   const fetchPendingSocieties = async () => {
     try {
@@ -46,6 +70,7 @@ const SuperAdminDashboard = () => {
     try {
       await axios.put(`http://localhost:5000/api/superadmin/societies/${tenantId}/${action}`, {}, { withCredentials: true });
       setPendingSocieties(prev => prev.filter(s => s.tenantId !== tenantId));
+      fetchStats(); // refresh stats
     } catch (err) {
       console.error(`Error ${action}ing society:`, err);
       alert(`Failed to ${action} society.`);
@@ -63,6 +88,7 @@ const SuperAdminDashboard = () => {
          setPendingSocieties([res.data, ...pendingSocieties]);
          setShowAddModal(false);
          setNewSociety({ name: '', tenantId: '' });
+         fetchStats();
       }
     } catch (err) {
       console.error('Error creating society:', err);
@@ -72,17 +98,14 @@ const SuperAdminDashboard = () => {
     }
   };
 
-  const chartData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-    datasets: [{
-      label: 'Platform Revenue',
-      data: [3000, 4500, 4200, 7800, 9500, 12500],
-      borderColor: '#4f46e5',
-      backgroundColor: 'rgba(79, 70, 229, 0.1)',
-      fill: true,
-      tension: 0.4
-    }]
-  };
+  const chartData = [
+    { name: 'Jan', Revenue: 0 },
+    { name: 'Feb', Revenue: 0 },
+    { name: 'Mar', Revenue: 0 },
+    { name: 'Apr', Revenue: 0 },
+    { name: 'May', Revenue: 0 },
+    { name: 'Current Month', Revenue: stats.revenue || 0 }
+  ];
 
   const cards = [
     { title: 'Total Societies', value: stats.societies, icon: Building2, trend: '+2 this month' },
@@ -100,7 +123,7 @@ const SuperAdminDashboard = () => {
          </div>
          <button 
            onClick={handleOpenModal}
-           className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-all flex items-center gap-2"
+           className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-all flex items-center gap-2 shadow-sm"
           >
             <Building2 size={16} /> Add Society
          </button>
@@ -132,7 +155,7 @@ const SuperAdminDashboard = () => {
                         onChange={(e) => setNewSociety({...newSociety, name: e.target.value})}
                         required
                         placeholder="e.g. Green Valley Apartments"
-                        className="w-full px-4 py-2 bg-background border border-border rounded-lg"
+                        className="w-full px-4 py-2 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/50 transition-all"
                       />
                    </div>
                    <div>
@@ -142,22 +165,22 @@ const SuperAdminDashboard = () => {
                          value={newSociety.tenantId}
                          onChange={(e) => setNewSociety({...newSociety, tenantId: e.target.value.toUpperCase()})}
                          placeholder="e.g. GVALLEY"
-                         className="w-full px-4 py-2 bg-background border border-border rounded-lg font-mono"
+                         className="w-full px-4 py-2 bg-background border border-border rounded-xl font-mono focus:ring-2 focus:ring-primary/50 transition-all"
                        />
-                       <p className="text-[10px] text-muted-foreground mt-1 uppercase font-bold text-primary italic">Auto-generated ID (You can customize it if you want)</p>
+                       <p className="text-[10px] text-muted-foreground mt-2 uppercase font-bold text-primary italic tracking-wider">Auto-generated ID (You can customize it if you want)</p>
                     </div>
                    <div className="flex justify-end gap-3 mt-6">
                       <button 
                         type="button"
                         onClick={() => setShowAddModal(false)}
-                        className="px-4 py-2 text-sm font-medium hover:bg-muted rounded-lg transition-colors"
+                        className="px-4 py-2 text-sm font-medium hover:bg-muted rounded-xl transition-colors"
                       >
                         Cancel
                       </button>
                       <button 
                         type="submit"
                         disabled={isSubmitting}
-                        className="bg-primary text-primary-foreground px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2"
+                        className="bg-primary text-primary-foreground px-6 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:scale-105 active:scale-95 transition-all"
                       >
                          {isSubmitting ? 'Creating...' : 'Create Society'}
                       </button>
@@ -175,17 +198,17 @@ const SuperAdminDashboard = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.1 }}
-            className="bg-card border border-border p-6 rounded-2xl glass shadow-sm"
+            className="bg-card border border-border p-6 rounded-2xl glass shadow-sm hover:border-border/80 transition-all"
           >
             <div className="flex justify-between items-start mb-4">
-              <div className="p-2 bg-primary/10 rounded-lg text-primary">
+              <div className="p-2 bg-primary/10 rounded-xl text-primary">
                 <card.icon size={20} />
               </div>
               <span className="text-xs font-medium text-green-500 flex items-center gap-1 bg-green-500/10 px-2 py-1 rounded-full">
                 <ArrowUpRight size={12} /> {card.trend.split(' ')[0]}
               </span>
             </div>
-            <h3 className="text-muted-foreground text-sm font-medium">{card.title}</h3>
+            <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">{card.title}</h3>
             <p className="text-3xl font-bold mt-1 text-foreground">{card.value}</p>
           </motion.div>
         ))}
@@ -221,17 +244,17 @@ const SuperAdminDashboard = () => {
                          >
                             <div className="flex items-center justify-between">
                                <div className="flex items-center gap-4">
-                                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-500 flex items-center justify-center text-white font-bold to-purple-600">
+                                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary flex items-center justify-center text-primary-foreground font-bold to-purple-600 shadow-sm">
                                      {society.name.charAt(0)}
                                   </div>
                                   <div>
                                      <h4 className="font-bold text-base">{society.name}</h4>
-                                     <p className="text-sm text-muted-foreground font-mono mt-0.5">ID: {society.tenantId}</p>
+                                     <p className="text-sm text-muted-foreground font-mono mt-0.5 tracking-wider">ID: {society.tenantId}</p>
                                   </div>
                                </div>
                                <div className="flex items-center gap-2">
                                   {actionLoading === society.tenantId ? (
-                                     <span className="text-sm text-muted-foreground animate-pulse px-4">Processing...</span>
+                                     <span className="text-sm text-muted-foreground animate-pulse px-4 font-medium">Processing...</span>
                                   ) : (
                                      <>
                                         <button 
@@ -240,7 +263,7 @@ const SuperAdminDashboard = () => {
                                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
                                               !society.admin 
                                               ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50' 
-                                              : 'bg-green-500/10 text-green-500 hover:bg-green-500/20 hover:scale-105 active:scale-95'
+                                              : 'bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white hover:scale-105 active:scale-95'
                                            }`}
                                            title={!society.admin ? "Waiting for Society Admin registration" : "Approve Society"}
                                         >
@@ -248,7 +271,7 @@ const SuperAdminDashboard = () => {
                                         </button>
                                         <button 
                                            onClick={() => handleAction(society.tenantId, 'reject')}
-                                           className="w-10 h-10 rounded-full flex items-center justify-center bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:scale-105 active:scale-95 transition-all"
+                                           className="w-10 h-10 rounded-full flex items-center justify-center bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white hover:scale-105 active:scale-95 transition-all"
                                            title="Reject Society"
                                         >
                                            <XCircle size={20} />
@@ -261,7 +284,7 @@ const SuperAdminDashboard = () => {
                             {society.admin ? (
                                <div className="bg-muted/30 p-3 rounded-lg flex items-center justify-between border border-border/50">
                                   <div>
-                                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Proposed Admin</p>
+                                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Proposed Admin</p>
                                      <div className="flex items-center gap-2">
                                         <span className="text-sm font-semibold">{society.admin.name}</span>
                                         <span className="text-xs text-muted-foreground">•</span>
@@ -269,7 +292,7 @@ const SuperAdminDashboard = () => {
                                      </div>
                                   </div>
                                   <div className="text-right">
-                                     <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">Awaiting Admin Approval</span>
+                                     <span className="text-[10px] bg-primary/10 text-primary px-2 py-1 rounded-full font-bold uppercase tracking-wider">Awaiting Approval</span>
                                   </div>
                                </div>
                             ) : (
@@ -284,6 +307,7 @@ const SuperAdminDashboard = () => {
             )}
          </motion.div>
          
+         {/* Recharts Revenue Panel */}
          <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -292,7 +316,15 @@ const SuperAdminDashboard = () => {
          >
             <h3 className="text-lg font-bold mb-4 flex-none">Revenue Growth</h3>
             <div className="flex-1 w-full relative min-h-[200px]">
-               <Line data={chartData} options={{ maintainAspectRatio: false }} />
+               <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
+                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                     <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                     <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
+                     <Tooltip content={<CustomTooltip />} />
+                     <Line type="monotone" dataKey="Revenue" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4, fill: '#1e293b', strokeWidth: 2 }} activeDot={{ r: 6, fill: '#8b5cf6' }} />
+                  </LineChart>
+               </ResponsiveContainer>
             </div>
          </motion.div>
       </div>
