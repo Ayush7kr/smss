@@ -1,0 +1,45 @@
+name: SSMS CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: '**/package-lock.json'
+        
+    - name: Install Backend Dependencies
+      working-directory: ./backend
+      run: npm ci || npm install
+      
+    - name: Install Frontend Dependencies
+      working-directory: ./frontend
+      run: npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+      
+    - name: Build Frontend
+      working-directory: ./frontend
+      run: npm run build
+      
+    - name: Run Backend Tests
+      working-directory: ./backend
+      run: npm test --if-present
+      
+    - name: Build Docker Images
+      run: |
+        docker-compose build

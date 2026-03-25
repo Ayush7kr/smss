@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongo:27017
+      - JWT_SECRET=supersecretjwtkey_ssms_2025
+    depends_on:
+      - mongo
+    networks:
+      - ssms-network
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+      - "5173:5173" # For dev
+    depends_on:
+      - backend
+    networks:
+      - ssms-network
+
+  mongo:
+    image: mongo:6.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - ssms-network
+
+volumes:
+  mongo-data:
+
+networks:
+  ssms-network:
+    driver: bridge
