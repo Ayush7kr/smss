@@ -303,4 +303,17 @@ const rejectComplaint = async (req, res) => {
   } catch (error) { res.status(500).json({ message: 'Server Error' }); }
 };
 
-module.exports = { getComplaints, createComplaint, assignComplaint, startComplaint, completeComplaint, verifyComplaint, escalateComplaint, reassignComplaint, rejectComplaint };
+const getVendorHistory = async (req, res) => {
+  try {
+    const Complaint = req.tenantDb.models.Complaint || req.tenantDb.model('Complaint', ComplaintSchema);
+    const complaints = await Complaint.find({ assignedVendorId: req.params.vendorId })
+        .populate('resident', 'name flatNumber')
+        .sort({ createdAt: -1 });
+    res.json(complaints);
+  } catch (error) {
+    console.error('getVendorHistory Error:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+module.exports = { getComplaints, createComplaint, assignComplaint, startComplaint, completeComplaint, verifyComplaint, escalateComplaint, reassignComplaint, rejectComplaint, getVendorHistory };

@@ -94,7 +94,10 @@ const getDashboardStats = async (req, res) => {
     }
 
     if (req.user.role === 'Resident') {
-       const myComplaints = await Complaint.countDocuments({ resident: req.user.userId });
+       const myComplaints = await Complaint.countDocuments({ 
+           resident: req.user.userId,
+           status: { $nin: ['Resolved', 'Verified', 'Completed'] } 
+       });
        const myPendingBills = await Bill.countDocuments({ resident: req.user.userId, status: 'Pending' });
        
        const recentComplaints = await Complaint.find({ resident: req.user.userId })

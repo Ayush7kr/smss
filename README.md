@@ -18,9 +18,8 @@ SSMS is a full-stack MERN application that enables residential societies to mana
 ## ✨ Key Features
 - **Administrator Dashboard**: Society-wide analytics, financial tracking, and vendor management.
 - **Resident Portal**: Maintenance ticket lifecycle tracking, visitor pre-approval, bill payments, and community feed.
-- **Vendor Portal**: Deadline-driven task management, real-time assignment alerts, and automated performance ratings.
+- **Vendor Portal**: Deadline-driven task management, real-time assignment alerts, and comprehensive task history.
 - **Security Guard Portal**: Digital visitor logs with webcam capture and instant resident notification.
-- **Global Search**: System-wide cross-collection search (Ctrl+K).
 
 ## 📄 Documentation
 For detailed technical information, refer to the following documents in the `docs/` folder:

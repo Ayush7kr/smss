@@ -53,6 +53,7 @@ SSMS implements a bidirectional communication layer for instantaneous updates.
 Vendors' ratings are calculated in real-time based on their historical metadata:
 - **Formula**: `(CompletedOnTime / TotalAssigned) * 5`.
 - **Latency Tracking**: Compares `completionDate` against the initial `dueDate` at the moment of task resolution.
+- **Vendor History**: A dedicated endpoint `GET /api/complaints/vendor/:vendorId/history` allows administrators to retrieve a full audit trail of a vendor's assigned, completed, and rejected tasks.
 
 ### B. Automated Escalation (CRON)
 - **Engine**: `node-cron` running background processes.
@@ -62,8 +63,9 @@ Vendors' ratings are calculated in real-time based on their historical metadata:
 
 ## 5. Frontend Architecture
 
-### A. State Management
+### A. State Management & Filtering
 - **AuthContext**: A React Context provider that manages the global user state and persistence across sessions.
+- **Dynamic Filtering**: The Complaints Hub implements advanced frontend filtering to hide `Resolved`, `Verified`, and `Completed` tasks by default, ensuring a focused view for all users.
 - **API Interceptor**: A centralized Axios instance with `withCredentials: true` to handle secure cookie-based authentication.
 
 ### B. UI Components & Styling

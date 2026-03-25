@@ -45,7 +45,6 @@ app.use('/api/users', require('./src/routes/userRoutes'));
 app.use('/api/notices', require('./src/routes/noticeRoutes'));
 app.use('/api/superadmin', require('./src/routes/superAdminRoutes'));
 app.use('/api/notifications', require('./src/routes/notificationRoutes'));
-app.use('/api/search', require('./src/routes/searchRoutes'));
 app.use('/api/feed', require('./src/routes/feedRoutes'));
 
 // Error handling middleware

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Wrench, Search, Filter, Phone, Star } from 'lucide-react';
+import { Wrench, Search, Filter, Phone, Star, History, X, Clock, MapPin } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
 import api from '../../utils/api';
 
 const getStatusColor = (status) => {
@@ -16,6 +17,9 @@ const Vendors = () => {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedVendor, setSelectedVendor] = useState(null);
+  const [vendorHistory, setVendorHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
     fetchVendors();
@@ -30,6 +34,19 @@ const Vendors = () => {
       console.error('Failed to fetch vendors', err);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const fetchVendorHistory = async (vendor) => {
+    setSelectedVendor(vendor);
+    setHistoryLoading(true);
+    try {
+      const res = await api.get(`/complaints/vendor/${vendor._id}/history`);
+      setVendorHistory(res.data);
+    } catch (err) {
+      console.error('Failed to fetch history', err);
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
@@ -140,6 +157,13 @@ const Vendors = () => {
                           <td className="py-4 px-6 text-right">
                              <div className="flex items-center justify-end gap-2 pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <div className="text-xs text-muted-foreground mr-2 font-mono">{vendor.phone || 'N/A'}</div>
+                                <button 
+                                   onClick={() => fetchVendorHistory(vendor)}
+                                   className="p-2 text-foreground bg-muted hover:bg-muted/80 rounded-lg transition-colors border border-border shadow-sm" 
+                                   title="View Task History"
+                                >
+                                   <History size={14} />
+                                </button>
                                 <button className="p-2 text-primary bg-primary/10 hover:bg-primary hover:text-white rounded-lg transition-colors border border-transparent shadow-sm" title="Call Vendor">
                                    <Phone size={14} />
                                 </button>
@@ -152,6 +176,83 @@ const Vendors = () => {
            </table>
         </div>
       </motion.div>
+      
+      {/* History Modal */}
+      <AnimatePresence>
+        {selectedVendor && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               onClick={() => setSelectedVendor(null)}
+               className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+            />
+            <motion.div 
+               initial={{ opacity: 0, scale: 0.95, y: 20 }}
+               animate={{ opacity: 1, scale: 1, y: 0 }}
+               exit={{ opacity: 0, scale: 0.95, y: 20 }}
+               className="bg-card border border-border w-full max-w-2xl p-6 rounded-2xl shadow-2xl relative z-10 flex flex-col max-h-[80vh]"
+            >
+               <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                     <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xl">
+                        {selectedVendor.name.charAt(0)}
+                     </div>
+                     <div>
+                        <h3 className="text-xl font-bold">{selectedVendor.name} - Task History</h3>
+                        <p className="text-sm text-muted-foreground">{selectedVendor.serviceType || 'General Service'}</p>
+                     </div>
+                  </div>
+                  <button onClick={() => setSelectedVendor(null)} className="p-2 hover:bg-muted rounded-full transition-colors">
+                     <X size={20} />
+                  </button>
+               </div>
+
+               <div className="flex-1 overflow-y-auto pr-2 space-y-4">
+                  {historyLoading ? (
+                     <div className="py-20 text-center text-muted-foreground animate-pulse">Loading history...</div>
+                  ) : vendorHistory.length === 0 ? (
+                     <div className="py-20 text-center text-muted-foreground italic">No tasks assigned to this vendor yet.</div>
+                  ) : (
+                     vendorHistory.map(task => (
+                        <div key={task._id} className="p-4 rounded-xl border border-border bg-muted/20">
+                           <div className="flex justify-between items-start mb-2">
+                              <div>
+                                 <p className="font-bold text-sm">{task.category}</p>
+                                 <p className="text-xs text-muted-foreground line-clamp-1">{task.description}</p>
+                              </div>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                 task.status === 'Resolved' || task.status === 'Verified' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
+                                 task.status === 'Rejected by Vendor' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                                 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                              }`}>
+                                 {task.status}
+                              </span>
+                           </div>
+                           <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
+                              <span className="flex items-center gap-1"><MapPin size={10} /> {task.location}</span>
+                              <span className="flex items-center gap-1"><Clock size={10} /> {new Date(task.createdAt).toLocaleDateString()}</span>
+                              {task.resident && <span>Resident: {task.resident.name}</span>}
+                           </div>
+                           {task.status === 'Rejected by Vendor' && task.resolutionNotes && (
+                              <div className="mt-2 p-2 bg-red-500/5 rounded text-[10px] text-red-500 italic border border-red-500/10">
+                                 Reason for rejection: {task.resolutionNotes}
+                              </div>
+                           )}
+                        </div>
+                     ))
+                  )}
+               </div>
+               
+               <div className="mt-6 pt-4 border-t border-border flex justify-between items-center text-xs text-muted-foreground">
+                  <div>Total Tasks: <span className="text-foreground font-bold">{vendorHistory.length}</span></div>
+                  <button onClick={() => setSelectedVendor(null)} className="px-4 py-2 bg-muted hover:bg-muted/80 text-foreground font-bold rounded-lg transition-colors">Close</button>
+               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -53,7 +53,7 @@ The **Smart Society Management System (SSMS)** is a comprehensive, multi-tenant 
 3. **Vendor** receives a real-time notification. They can either **Start Work** or **Reject** (with reason).
 4. **Admin** is notified if a task is rejected and can **Reassign** it.
 5. If the deadline passes without completion, the system **Escalates** the task and penalizes the vendor's rating via an automated Cron job.
-6. **Vendor** marks task as **Completed**, which auto-resolves the ticket and notifies the **Resident**.
+6. **Vendor** marks task as **Completed**, which **Auto-Resolves** the ticket and instantly updates the resident's dashboard.
 
 ### B. The Visitor Entry Workflow
 1. **Resident** pre-approves a guest or delivery in the dashboard.
@@ -73,4 +73,4 @@ The **Smart Society Management System (SSMS)** is a comprehensive, multi-tenant 
 - **Glassmorphism Design**: A modern, premium aesthetic using blurred backgrounds and depth effects.
 - **Interactive Dashboards**: Data visualization using Recharts for quick administrative insights.
 - **Fluid Animations**: Smooth transitions powered by Framer Motion.
-- **Global Search**: `Ctrl + K` interface to find any entity (User, Visitor, Bill, Ticket) across the entire system.
+- **Responsive Layout**: Clean design ensuring usability on tablets, mobiles, and desktops.

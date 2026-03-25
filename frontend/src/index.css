@@ -16,6 +16,8 @@
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
   --border: #e2e8f0;
+  --card: #ffffff;
+  --popover: #ffffff;
 }
 
 .dark {
@@ -26,6 +28,8 @@
   --muted: #0f172a;
   --muted-foreground: #94a3b8;
   --border: #1e293b;
+  --card: #0f172a;
+  --popover: #0f172a;
 }
 
 /* Fallback for system preference if no explicit class is set */

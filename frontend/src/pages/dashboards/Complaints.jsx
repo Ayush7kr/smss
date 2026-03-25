@@ -46,6 +46,7 @@ const Complaints = () => {
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterActive, setFilterActive] = useState(true);
   
   const [isCreating, setIsCreating] = useState(false);
   const [newTicket, setNewTicket] = useState({ category: 'Maintenance', description: '', location: '', priority: 'Low' });
@@ -143,11 +144,14 @@ const Complaints = () => {
     v.serviceType?.toLowerCase().includes(vendorSearch.toLowerCase())
   );
 
-  const filteredComplaints = complaints.filter(c => 
-    c.description?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    c._id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.category?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredComplaints = complaints.filter(c => {
+    const matchesSearch = c.description?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      c._id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.category?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (!filterActive) return matchesSearch;
+    return matchesSearch && !['Resolved', 'Verified', 'Completed'].includes(c.status);
+  });
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
@@ -167,8 +171,13 @@ const Complaints = () => {
                   className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
                />
             </div>
-            <button className="p-2 border border-border rounded-lg bg-card hover:bg-muted text-foreground transition-colors" title="Filter">
+            <button 
+              onClick={() => setFilterActive(!filterActive)}
+              className={`p-2 border border-border rounded-lg transition-colors flex items-center gap-2 ${filterActive ? 'bg-primary/10 text-primary border-primary/20' : 'bg-card text-foreground hover:bg-muted'}`}
+              title={filterActive ? "Showing Active Only" : "Showing All Tickets"}
+            >
                <Filter size={20} />
+               <span className="text-xs font-bold hidden sm:inline">{filterActive ? 'Active' : 'All'}</span>
             </button>
             {user?.role === 'Resident' && (
               <button 
@@ -416,10 +425,16 @@ const Complaints = () => {
                                <span className="text-xs font-bold text-foreground">{complaint.category}</span>
                             </div>
                             <p className="font-medium text-foreground line-clamp-2 max-w-sm">{complaint.description}</p>
-                            {complaint.resolutionNotes && (
-                               <div className="mt-1.5 p-2 bg-muted/50 rounded-lg text-xs border border-border/50">
-                                  <span className="font-bold text-foreground">Note: </span>
-                                  <span className="text-muted-foreground italic">{complaint.resolutionNotes}</span>
+                            {complaint.resolutionNotes && complaint.status === 'Rejected by Vendor' && (
+                               <div className="mt-1.5 p-2 bg-red-500/10 rounded-lg text-xs border border-red-500/20">
+                                  <span className="font-bold text-red-500">Rejection Note: </span>
+                                  <span className="text-red-500 italic">{complaint.resolutionNotes}</span>
+                               </div>
+                            )}
+                            {complaint.status === 'Resolved' && complaint.resolutionNotes && (
+                               <div className="mt-1.5 p-2 bg-green-500/10 rounded-lg text-xs border border-green-500/20">
+                                  <span className="font-bold text-green-600">Resolution Note: </span>
+                                  <span className="text-green-600 italic">{complaint.resolutionNotes}</span>
                                </div>
                             )}
                             <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">

@@ -9,7 +9,8 @@ const {
   verifyComplaint,
   escalateComplaint,
   reassignComplaint,
-  rejectComplaint
+  rejectComplaint,
+  getVendorHistory
 } = require('../controllers/complaintController');
 const { protect, authorize } = require('../middleware/auth');
 const { tenantMiddleware } = require('../middleware/tenant');
@@ -29,5 +30,7 @@ router.put('/:id/verify', authorize('Resident', 'Society_Admin'), verifyComplain
 router.put('/:id/escalate', authorize('Resident', 'Society_Admin'), escalateComplaint);
 router.put('/:id/reassign', authorize('Society_Admin', 'Super_Admin'), reassignComplaint);
 router.put('/:id/reject', authorize('Vendor'), rejectComplaint);
+
+router.get('/vendor/:vendorId/history', authorize('Society_Admin', 'Super_Admin'), getVendorHistory);
 
 module.exports = router;

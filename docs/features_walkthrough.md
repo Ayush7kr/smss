@@ -18,6 +18,7 @@ The **Smart Society Management System (SSMS)** is a comprehensive platform built
 
 ### 3. Vendor Performance Tracking
 - **Service Directory**: Managed list of plumbers, electricians, and security providers.
+- **Vendor History**: Admins can view a detailed audit trail of all tasks assigned to a vendor, including successes, delays, and rejections.
 - **Dynamic Ratings**: Auto-calculating vendor performance scores based on their historical completion speed vs. deadlines.
 
 ---
@@ -65,6 +66,6 @@ The **Smart Society Management System (SSMS)** is a comprehensive platform built
 - **Universal Alerts**: A centralized notification bell system that pushes updates across all roles instantly.
 - **Handshake Security**: All real-time sockets are secured via JWT authentication.
 
-### 10. Global Commands & Search
-- **Cmd+K Search**: Rapidly find any ticket, resident, vendor, or visitor log from any page in the application.
-- **Universal Dashboard Layout**: Clean, responsive Glassmorphism UI ensuring usability on Tablets, Mobiles, and Desktops.
+### 10. Modern Responsive UI
+- **Glassmorphism Layout**: Clean, responsive design ensuring usability on Tablets, Mobiles, and Desktops.
+- **Dynamic Filtering**: Residents and Admins can toggle between "Active" and "All" views to keep dashboards focused.

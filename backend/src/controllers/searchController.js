@@ -20,8 +20,11 @@ const globalSearch = async (req, res) => {
 
     const isResident = req.user.role === 'Resident';
     
-    const userQuery = { $or: [{ name: regex }, { email: regex }, { flatNumber: regex }] };
-    if (isResident) userQuery._id = req.user.userId; // residents only search themselves
+    const userQuery = { $or: [{ name: regex }, { email: regex }, { flatNumber: regex }, { serviceType: regex }] };
+    if (isResident) {
+       // Residents can search themselves OR vendors
+       userQuery._id = { $in: [req.user.userId, ...(await User.find({ role: 'Vendor' }).distinct('_id'))] };
+    }
     
     const users = await User.find(userQuery).limit(5).select('name role flatNumber email');
 
