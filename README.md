@@ -31,7 +31,7 @@ For detailed technical information, refer to the following documents in the `doc
 ## 🚦 Getting Started
 
 ### Prerequisites
-- Node.js (v18+)
+- Node.js (v20+)
 - MongoDB (Running locally or on Atlas)
 
 ### 1. Configure Environment Variables

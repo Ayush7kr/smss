@@ -5,7 +5,7 @@ This guide provides step-by-step instructions to get the **Smart Society Managem
 ## 📋 Prerequisites
 
 Before you begin, ensure you have the following installed:
-1.  **Node.js**: [Download v18+](https://nodejs.org/)
+1.  **Node.js**: [Download v20+](https://nodejs.org/)
 2.  **MongoDB**: [Download MongoDB Community Server](https://www.mongodb.com/try/download/community)
     - *Alternatively, use [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) for a cloud-hosted database.*
 3.  **Git**: [Download Git](https://git-scm.com/) (to clone the repo)
